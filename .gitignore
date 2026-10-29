@@ -1,0 +1,22 @@
+# Factures générées et sorties (reconstruites par `factocr generer` et `factocr ocr`)
+/data/
+/sorties/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+
+# Éditeurs
+.vscode/
+.idea/
+.DS_Store

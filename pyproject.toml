@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "factocr"
+version = "0.0.1"
+description = "Extraction de factures françaises avec Indra OCR (Datalab) : OCR sur CPU, champs structurés, export CSV et comparaison avec Tesseract."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Graciela THOO" }]
+requires-python = ">=3.10"
+keywords = ["ocr", "indra-ocr", "factures", "extraction", "llm"]
+dependencies = [
+  "reportlab>=4.0",
+  "pillow>=10.0",
+  "pypdfium2>=4.30",
+  "numpy>=1.26",
+  "typer>=0.12",
+  "rich>=13.7",
+]
+
+[project.optional-dependencies]
+ocr = ["indra-ocr>=1.1"]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+[project.scripts]
+factocr = "factocr.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/factocr"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["B008"]  # typer.Option dans les valeurs par défaut
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
