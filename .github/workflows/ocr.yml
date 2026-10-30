@@ -1,0 +1,66 @@
+name: OCR Indra
+
+# Indra télécharge ses poids depuis Hugging Face : ses vrais passages se font ici.
+on:
+  workflow_dispatch:
+    inputs:
+      nombre:
+        description: Nombre de factures générées
+        default: "20"
+  push:
+    branches: [main]
+    paths: ["src/**", "pyproject.toml", ".github/workflows/ocr.yml"]
+
+concurrency:
+  group: ocr-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ocr:
+    name: Indra sur factures synthétiques
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NOMBRE: ${{ inputs.nombre || '20' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Cache des poids Indra
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: indra-poids-${{ hashFiles('pyproject.toml') }}
+          restore-keys: indra-poids-
+      - name: Installation
+        run: pip install -e ".[ocr]"
+      - name: Factures synthétiques
+        run: factocr generer --nombre "$NOMBRE" --dossier data
+      - name: OCR (couche texte si présente)
+        run: factocr ocr data --mode auto | tee sorties-auto.json
+      - name: OCR forcé (même sur les PDF numériques)
+        run: factocr ocr data --mode ocr | tee sorties-ocr.json
+      - name: Résumé
+        run: |
+          {
+            echo "## Indra OCR sur $NOMBRE factures"
+            echo
+            echo "Mode auto :"
+            echo '```json'; cat sorties-auto.json; echo '```'
+            echo "Mode ocr :"
+            echo '```json'; cat sorties-ocr.json; echo '```'
+            echo
+            echo "### Extrait : facture_001 scannée"
+            echo '```'
+            python -c "from factocr.ocr import DocumentOCR; import pathlib; print(DocumentOCR.depuis_json(pathlib.Path('sorties/ocr/indra-ocr/scan/facture_001.json').read_text()).texte)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ocr-indra
+          path: |
+            sorties/
+            data/verite/
+          retention-days: 14

@@ -24,6 +24,8 @@ Le plan jour par jour est dans [docs/PLAN.md](docs/PLAN.md).
 ```bash
 pip install -e ".[dev]"
 factocr generer --nombre 20          # data/numerique, data/scan, data/verite
+pip install -e ".[ocr]"
+factocr ocr data --mode ocr          # sorties/ocr/indra-ocr/…/*.json
 pytest
 ```
 
