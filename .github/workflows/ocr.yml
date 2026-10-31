@@ -42,6 +42,17 @@ jobs:
         run: factocr ocr data --mode auto | tee sorties-auto.json
       - name: OCR forcé (même sur les PDF numériques)
         run: factocr ocr data --mode ocr | tee sorties-ocr.json
+      - name: Extraction par règles et évaluation
+        run: |
+          factocr extraire sorties/ocr/indra-auto
+          factocr extraire sorties/ocr/indra-ocr
+      - name: Textes OCR de trois scans (pour ajuster les règles)
+        run: |
+          for f in 001 002 003; do
+            echo "=== scan facture_$f ==="
+            python -c "from factocr.ocr import DocumentOCR; import pathlib; print(DocumentOCR.depuis_json(pathlib.Path('sorties/ocr/indra-ocr/scan/facture_$f.json').read_text()).texte)"
+          done
+          python -c "import json; r=json.load(open('sorties/extraction/indra-ocr-evaluation.json')); print(json.dumps(r['erreurs'][:40], ensure_ascii=False, indent=1))"
       - name: Résumé
         run: |
           {
@@ -51,6 +62,12 @@ jobs:
             echo '```json'; cat sorties-auto.json; echo '```'
             echo "Mode ocr :"
             echo '```json'; cat sorties-ocr.json; echo '```'
+            echo
+            echo "### Exactitude de l'extraction par règles, mode auto"
+            cat sorties/extraction/indra-auto-evaluation.md
+            echo
+            echo "### Exactitude de l'extraction par règles, OCR forcé"
+            cat sorties/extraction/indra-ocr-evaluation.md
             echo
             echo "### Extrait : facture_001 scannée"
             echo '```'
