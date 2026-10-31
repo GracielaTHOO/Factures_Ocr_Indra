@@ -93,3 +93,20 @@ def test_rapport_evaluation(tmp_path):
     assert rapport["factures_parfaites"] == {"numerique": 1, "scan": 0}
     assert len(rapport["erreurs"]) == len(CHAMPS)
     assert "| **facture entièrement juste** | 1/1 | 0/1 |" in tableau_markdown(rapport)
+
+
+def test_vraie_sortie_indra_sur_un_scan():
+    # Texte rendu par Indra OCR 1.1.2 (mode ocr) sur le scan simulé de facture_002,
+    # copié du workflow « OCR Indra » du 31/10/2026. Les lignes du tableau sortent dans
+    # un ordre inattendu ; les champs d'en-tête et les totaux restent lisibles.
+    from pathlib import Path
+
+    texte = (Path(__file__).parent / "fixtures" / "indra_scan_facture_002.txt").read_text()
+    ex = extraire(doc_texte(texte))
+    assert ex.numero == "F2026-1140"
+    assert ex.date == "2026-08-24"
+    assert ex.fournisseur == "Nettoyage Pro Ouest SARL"
+    assert ex.siret == "23511615959409"
+    assert ex.tva_intra == "FR88235116159"
+    assert (ex.total_ht, ex.total_tva, ex.total_ttc) == ("18063.40", "1797.74", "19861.14")
+    assert all(ex.controles.values())

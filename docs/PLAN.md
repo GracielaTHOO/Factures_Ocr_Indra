@@ -15,6 +15,17 @@ Un commit par jour au minimum, sur `main`, avec une CI verte.
 | J5 | lun 02/11 | `feat(bench): Indra contre Tesseract` + `docs: premiers résultats` | temps par page, taux d'erreur caractère et exactitude par champ, sur PDF numériques et scans ; rapport `results/bench.md` généré en CI |
 | J6 | mar 03/11 | `feat(demo): mini-interface` + `docs: README final` | interface Gradio : on dépose une facture, on voit les champs et les boîtes surlignées ; README avec résultats et capture ; version 0.1.0 (release créée à la main sur GitHub) |
 
+## Journal
+
+- **J1 (29/10)** : générateur de factures synthétiques, CI verte.
+- **J2 (30/10)** : Indra tourne dans GitHub Actions ; médiane 230 à 340 ms par page en OCR forcé
+  sur un runner standard (4 cœurs).
+- **J3 (31/10)** : extraction par règles juste à 100 % sur les 20 factures, en PDF numérique comme
+  en scan simulé. Indra lit parfaitement l'en-tête et les totaux ; ses seules erreurs visibles
+  sont mineures (« boîte » lu « boite », « 5,5 % » lu « 5.5% ») et l'ordre des cellules du tableau
+  est parfois inattendu. Nos scans simulés sont trop propres pour départager les moteurs : J5
+  ajoutera des niveaux de dégradation plus durs.
+
 ## Ce qui peut glisser
 
 - Si le LLM en CI est trop lent, J4 se limite aux règles et le LLM passe après mardi.
