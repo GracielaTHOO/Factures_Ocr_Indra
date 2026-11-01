@@ -25,6 +25,13 @@ Un commit par jour au minimum, sur `main`, avec une CI verte.
   sont mineures (« boîte » lu « boite », « 5,5 % » lu « 5.5% ») et l'ordre des cellules du tableau
   est parfois inattendu. Nos scans simulés sont trop propres pour départager les moteurs : J5
   ajoutera des niveaux de dégradation plus durs.
+- **J4 (01/11)** : extraction par LLM (Qwen2.5 3B via Ollama, sur CPU dans GitHub Actions) sur
+  les 20 scans : en-tête et totaux justes à 100 % sauf le fournisseur (90 % : « Papeterie du
+  Centre » sans « EURL »), mais lignes du tableau justes sur 8 factures sur 20 seulement. Le
+  texte d'Indra donne les cellules du tableau dans le désordre, et le modèle mélange alors
+  quantités et désignations. Compter 40 s par facture (13 min pour 20). Conclusion provisoire :
+  les règles suffisent pour l'en-tête ; pour les lignes, il faudra reconstruire le tableau à
+  partir des boîtes d'Indra (même hauteur = même ligne) avant de le donner au LLM.
 
 ## Ce qui peut glisser
 
