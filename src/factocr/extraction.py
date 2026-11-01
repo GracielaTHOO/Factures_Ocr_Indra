@@ -11,6 +11,7 @@ from __future__ import annotations
 import re
 from dataclasses import asdict, dataclass, field
 from decimal import Decimal, InvalidOperation
+from typing import Any
 
 from factocr.ocr import DocumentOCR, LigneOCR
 from factocr.synthese import luhn_valide, tva_intra
@@ -51,7 +52,9 @@ class Extraction:
     total_ht: str | None = None
     total_tva: str | None = None
     total_ttc: str | None = None
+    lignes: list[dict[str, Any]] | None = None  # seule l'extraction par LLM les lit
     controles: dict[str, bool | None] = field(default_factory=dict)
+    methode: str = "regles"
 
     def vers_dict(self) -> dict:
         return asdict(self)

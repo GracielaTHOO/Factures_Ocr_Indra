@@ -22,8 +22,24 @@ def normaliser(champ: str, valeur: str | None) -> str | None:
     return valeur.strip().upper() if champ in ("numero", "tva_intra") else valeur.strip()
 
 
+def cle_ligne(lg: dict[str, Any]) -> tuple:
+    return (
+        normaliser("fournisseur", lg.get("description")),
+        lg.get("quantite"),
+        lg.get("prix_unitaire_ht"),
+        lg.get("taux_tva"),
+        lg.get("montant_ht"),
+    )
+
+
 def comparer(extraction: Extraction, verite: dict[str, Any]) -> dict[str, bool]:
-    return {c: normaliser(c, getattr(extraction, c)) == normaliser(c, verite[c]) for c in CHAMPS}
+    """Champ -> juste ou faux. « lignes » n'apparaît que si l'extraction les a lues."""
+    scores = {c: normaliser(c, getattr(extraction, c)) == normaliser(c, verite[c]) for c in CHAMPS}
+    if extraction.lignes is not None:
+        attendues = sorted(map(cle_ligne, verite["lignes"]), key=repr)
+        obtenues = sorted(map(cle_ligne, extraction.lignes), key=repr)
+        scores["lignes"] = attendues == obtenues
+    return scores
 
 
 def evaluer(resultats: list[tuple[str, Extraction, dict[str, Any]]]) -> dict[str, Any]:
@@ -42,7 +58,7 @@ def evaluer(resultats: list[tuple[str, Extraction, dict[str, Any]]]) -> dict[str
                         "variante": variante,
                         "champ": champ,
                         "attendu": verite[champ],
-                        "obtenu": getattr(ex, champ),
+                        "obtenu": getattr(ex, champ) if champ != "lignes" else ex.lignes,
                     }
                 )
         for nom, ok in ex.controles.items():
@@ -71,7 +87,8 @@ def tableau_markdown(rapport: dict[str, Any]) -> str:
         "| Champ | " + " | ".join(variantes) + " |",
         "|---|" + "---:|" * len(variantes),
     ]
-    for champ in CHAMPS:
+    champs = [*CHAMPS, "lignes"] if "lignes" in rapport["exactitude"][variantes[0]] else CHAMPS
+    for champ in champs:
         cellules = [f"{rapport['exactitude'][v][champ]:.0%}" for v in variantes]
         lignes.append(f"| {champ} | " + " | ".join(cellules) + " |")
     parfaites = [f"{rapport['factures_parfaites'][v]}/{rapport['nombre'][v]}" for v in variantes]

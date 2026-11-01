@@ -55,36 +55,62 @@ def extraire(
     ocr: Path = typer.Argument(..., help="Dossier des JSON OCR (ex. sorties/ocr/indra-ocr)."),
     verite: Path = typer.Option(Path("data/verite"), help="Vérité terrain, pour évaluer."),
     sortie: Path = typer.Option(Path("sorties/extraction"), help="Dossier des résultats."),
+    methode: str = typer.Option("regles", help="regles, ou llm (Ollama, repli sur les règles)."),
+    modele: str = typer.Option("qwen2.5:3b", help="Modèle Ollama, pour --methode llm."),
+    url: str = typer.Option("http://127.0.0.1:11434", help="Adresse du serveur Ollama."),
+    variante: str = typer.Option("", help="Ne traiter qu'un sous-dossier (ex. scan)."),
 ) -> None:
-    """Extrait les champs par règles et, si la vérité existe, mesure l'exactitude."""
+    """Extrait les champs, écrit un CSV et, si la vérité existe, mesure l'exactitude."""
     import json
 
     from factocr.evaluation import charger_verite, evaluer, tableau_markdown
-    from factocr.extraction import extraire as _extraire
+    from factocr.export import ecrire_csv
+    from factocr.extraction import extraire as _regles
     from factocr.ocr import DocumentOCR
+
+    if methode == "llm":
+        from factocr.llm import extraire_llm
+
+        def _extraire(doc: DocumentOCR):  # noqa: ANN202
+            return extraire_llm(doc, modele, url)
+    elif methode == "regles":
+        _extraire = _regles
+    else:
+        raise typer.BadParameter(f"méthode inconnue : {methode}")
 
     verites = charger_verite(verite) if verite.is_dir() else {}
     resultats = []
     extractions = {}
-    for chemin in sorted(ocr.rglob("*.json")):
+    chemins = sorted(ocr.rglob("*.json"))
+    if variante:
+        chemins = [c for c in chemins if c.parent.name == variante]
+    for chemin in chemins:
         doc = DocumentOCR.depuis_json(chemin.read_text(encoding="utf-8"))
         ex = _extraire(doc)
-        variante = chemin.parent.name
-        extractions[f"{variante}/{chemin.stem}"] = ex.vers_dict()
+        extractions[f"{chemin.parent.name}/{chemin.stem}"] = ex
         if chemin.stem in verites:
-            resultats.append((variante, ex, verites[chemin.stem]))
+            resultats.append((chemin.parent.name, ex, verites[chemin.stem]))
 
     sortie.mkdir(parents=True, exist_ok=True)
-    nom = ocr.name
+    nom = f"{ocr.name}-{methode}" + (f"-{variante}" if variante else "")
     (sortie / f"{nom}.json").write_text(
-        json.dumps(extractions, ensure_ascii=False, indent=1), encoding="utf-8"
+        json.dumps(
+            {k: e.vers_dict() for k, e in extractions.items()}, ensure_ascii=False, indent=1
+        ),
+        encoding="utf-8",
     )
-    console.print(f"{len(extractions)} documents extraits -> {sortie / f'{nom}.json'}")
+    ecrire_csv(extractions, sortie / f"{nom}.csv")
+    console.print(f"{len(extractions)} documents extraits -> {sortie / f'{nom}.csv'}")
     if resultats:
         rapport = evaluer(resultats)
+        rapport["methodes"] = {
+            m: sum(e.methode == m for e in extractions.values())
+            for m in sorted({e.methode for e in extractions.values()})
+        }
         (sortie / f"{nom}-evaluation.json").write_text(
             json.dumps(rapport, ensure_ascii=False, indent=1), encoding="utf-8"
         )
         tableau = tableau_markdown(rapport)
         (sortie / f"{nom}-evaluation.md").write_text(tableau + "\n", encoding="utf-8")
         console.print(tableau)
+        console.print(f"Origine des résultats : {rapport['methodes']}")

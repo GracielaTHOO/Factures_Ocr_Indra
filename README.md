@@ -26,7 +26,8 @@ pip install -e ".[dev]"
 factocr generer --nombre 20          # data/numerique, data/scan, data/verite
 pip install -e ".[ocr]"
 factocr ocr data --mode ocr          # sorties/ocr/indra-ocr/…/*.json
-factocr extraire sorties/ocr/indra-ocr   # champs + exactitude par champ
+factocr extraire sorties/ocr/indra-ocr   # règles : CSV + exactitude par champ
+factocr extraire sorties/ocr/indra-ocr --methode llm --modele qwen2.5:3b   # LLM local (Ollama)
 pytest
 ```
 
