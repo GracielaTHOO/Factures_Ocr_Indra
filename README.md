@@ -28,6 +28,9 @@ pip install -e ".[ocr]"
 factocr ocr data --mode ocr          # sorties/ocr/indra-ocr/…/*.json
 factocr extraire sorties/ocr/indra-ocr   # règles : CSV + exactitude par champ
 factocr extraire sorties/ocr/indra-ocr --methode llm --modele qwen2.5:3b   # LLM local (Ollama)
+factocr generer --niveaux moyen,fort  # + scans plus abîmés (scan_moyen, scan_fort)
+pip install -e ".[tesseract]"        # et le paquet système tesseract-ocr-fra
+factocr bench data                   # Indra contre Tesseract : mots, champs, temps
 pytest
 ```
 

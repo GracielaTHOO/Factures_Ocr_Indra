@@ -22,6 +22,7 @@ dependencies = [
 
 [project.optional-dependencies]
 ocr = ["indra-ocr>=1.1"]
+tesseract = ["pytesseract>=0.3.10"]
 dev = ["pytest>=8.0", "ruff>=0.6"]
 
 [project.scripts]

@@ -1,0 +1,68 @@
+name: Banc Indra contre Tesseract
+
+on:
+  workflow_dispatch:
+    inputs:
+      nombre:
+        description: Nombre de factures générées
+        default: "20"
+  push:
+    branches: [main]
+    paths: ["src/**", "pyproject.toml", ".github/workflows/bench.yml"]
+
+concurrency:
+  group: bench-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bench:
+    name: Indra et Tesseract, du PDF au scan abîmé
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NOMBRE: ${{ inputs.nombre || '20' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Cache des poids Indra
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: indra-poids-${{ hashFiles('pyproject.toml') }}
+          restore-keys: indra-poids-
+      - name: Installation
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q tesseract-ocr tesseract-ocr-fra
+          tesseract --version | head -1
+          pip install -e ".[ocr,tesseract]"
+      - name: Factures synthétiques (scan léger, moyen et fort)
+        run: factocr generer --nombre "$NOMBRE" --niveaux moyen,fort --dossier data
+      - name: Banc d'essai
+        run: factocr bench data --moteurs indra,tesseract
+      - name: Erreurs d'extraction (scan moyen)
+        run: |
+          python - <<'PY'
+          import json
+          r = json.load(open("sorties/bench/bench.json"))
+          for moteur, variantes in r.items():
+              for e in variantes["scan_moyen"]["erreurs"][:25]:
+                  print(moteur, e["facture"], e["champ"], repr(e["attendu"]), repr(e["obtenu"]))
+          PY
+      - name: Résumé
+        run: |
+          {
+            echo "## Indra contre Tesseract sur $NOMBRE factures"
+            echo
+            cat sorties/bench/bench.md
+            echo
+            echo "OCR forcé partout (la couche texte des PDF n'est pas lue). Runner GitHub standard, 4 cœurs."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bench
+          path: sorties/bench/
+          retention-days: 14

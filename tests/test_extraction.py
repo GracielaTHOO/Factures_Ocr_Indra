@@ -110,3 +110,14 @@ def test_vraie_sortie_indra_sur_un_scan():
     assert ex.tva_intra == "FR88235116159"
     assert (ex.total_ht, ex.total_tva, ex.total_ttc) == ("18063.40", "1797.74", "19861.14")
     assert all(ex.controles.values())
+
+
+def test_confusions_tesseract():
+    # Tesseract lit parfois « FACTURE » et « N° TVA » sur la même ligne, et « 0 » comme « O ».
+    texte = (
+        "Cosméto Bio SAS FACTURE\nN° TVA intracommunautaire : FRO0433218195\n"
+        "Facture n° F2026-3258\nDate : 22/04/2026"
+    )
+    ex = extraire(doc_texte(texte))
+    assert ex.numero == "F2026-3258"
+    assert ex.tva_intra == "FR00433218195"

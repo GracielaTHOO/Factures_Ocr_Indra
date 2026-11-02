@@ -21,11 +21,16 @@ def generer(
     dossier: Path = typer.Option(Path("data"), help="Dossier de sortie."),
     nombre: int = typer.Option(20, min=1, help="Nombre de factures."),
     graine: int = typer.Option(42, help="Graine aléatoire (même graine, mêmes factures)."),
+    niveaux: str = typer.Option("", help="Scans plus abîmés en plus du léger : moyen,fort."),
 ) -> None:
     """Génère des factures synthétiques : PDF, scan simulé et vérité terrain JSON."""
+    from factocr.synthese import NIVEAUX
     from factocr.synthese import generer as _generer
 
-    factures = _generer(dossier, nombre, graine)
+    choisis = tuple(n for n in niveaux.split(",") if n)
+    if inconnus := [n for n in choisis if n not in NIVEAUX or n == "leger"]:
+        raise typer.BadParameter(f"niveaux inconnus : {inconnus} (possibles : moyen, fort)")
+    factures = _generer(dossier, nombre, graine, choisis)
     console.print(f"[green]{len(factures)} factures écrites dans {dossier}/[/green]")
 
 
@@ -45,7 +50,7 @@ def ocr(
     from factocr.ocr import ocr_dossier, resume
 
     lecteur = _moteur(moteur, mode)
-    documents = ocr_dossier(lecteur, entree, sortie / f"{moteur}-{mode}")
+    documents = ocr_dossier(lecteur, entree, sortie / f"{moteur}-{lecteur.mode}")
     stats = resume(documents)
     console.print_json(json.dumps(stats, ensure_ascii=False))
 
@@ -114,3 +119,27 @@ def extraire(
         (sortie / f"{nom}-evaluation.md").write_text(tableau + "\n", encoding="utf-8")
         console.print(tableau)
         console.print(f"Origine des résultats : {rapport['methodes']}")
+
+
+@app.command()
+def bench(
+    donnees: Path = typer.Argument(Path("data"), help="Dossier de `factocr generer`."),
+    moteurs: str = typer.Option("indra,tesseract", help="Moteurs à comparer."),
+    variantes: str = typer.Option(
+        "numerique,scan,scan_moyen,scan_fort", help="Sous-dossiers à lire (OCR forcé)."
+    ),
+    sortie: Path = typer.Option(Path("sorties/bench"), help="Dossier des résultats."),
+) -> None:
+    """Compare les moteurs OCR : mots retrouvés, champs extraits par règles, temps."""
+    import json
+
+    from factocr.bench import banc, tableau
+
+    resultats = banc(donnees, moteurs.split(","), sortie, variantes.split(","))
+    sortie.mkdir(parents=True, exist_ok=True)
+    (sortie / "bench.json").write_text(
+        json.dumps(resultats, ensure_ascii=False, indent=1), encoding="utf-8"
+    )
+    texte = tableau(resultats)
+    (sortie / "bench.md").write_text(texte + "\n", encoding="utf-8")
+    console.print(texte)

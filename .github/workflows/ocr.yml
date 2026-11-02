@@ -51,12 +51,15 @@ jobs:
           factocr extraire sorties/ocr/indra-auto
           factocr extraire sorties/ocr/indra-ocr
       - name: Installation d'Ollama
+        if: github.event_name == 'workflow_dispatch'
         run: |
           curl -fsSL https://ollama.com/install.sh | sh
           ollama serve > /tmp/ollama.log 2>&1 &
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:11434/api/tags && break; sleep 1; done
           ollama pull "$MODELE"
       - name: Extraction par LLM (scans, OCR forcé)
+        # 13 min environ : lancé à la main seulement (Actions > OCR Indra > Run workflow).
+        if: github.event_name == 'workflow_dispatch'
         timeout-minutes: 60
         run: |
           time factocr extraire sorties/ocr/indra-ocr --methode llm --modele "$MODELE" --variante scan
@@ -77,9 +80,11 @@ jobs:
             echo "### Exactitude de l'extraction par règles, OCR forcé"
             cat sorties/extraction/indra-ocr-regles-evaluation.md
             echo
-            echo "### Exactitude de l'extraction par LLM ($MODELE), scans"
-            cat sorties/extraction/indra-ocr-llm-scan-evaluation.md
-            python -c "import json; print('Origine :', json.load(open('sorties/extraction/indra-ocr-llm-scan-evaluation.json'))['methodes'])"
+            if [ -f sorties/extraction/indra-ocr-llm-scan-evaluation.md ]; then
+              echo "### Exactitude de l'extraction par LLM ($MODELE), scans"
+              cat sorties/extraction/indra-ocr-llm-scan-evaluation.md
+              python -c "import json; print('Origine :', json.load(open('sorties/extraction/indra-ocr-llm-scan-evaluation.json'))['methodes'])"
+            fi
             echo
             echo "### Extrait : facture_001 scannée"
             echo '```'

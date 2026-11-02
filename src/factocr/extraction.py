@@ -28,12 +28,17 @@ CHAMPS = (
 )
 
 MONTANT = re.compile(r"(\d{1,3}(?:[   .]?\d{3})*[.,]\d{2})(?!\d)")
-NUMERO = re.compile(r"factur\w*\s*n\s*[°ºo0]?\s*[:.]?\s*([A-Z0-9][A-Z0-9/_-]{2,})", re.I)
+# Le numéro contient au moins un chiffre : « Facture N° TVA… » n'est pas un numéro.
+NUMERO = re.compile(
+    r"factur\w*\s*n\s*[°ºo0]?\s*[:.]?\s*(?=[A-Z/_-]*\d)([A-Z0-9][A-Z0-9/_-]{2,})", re.I
+)
 DATE = re.compile(r"(\d{2})\s*[/.-]\s*(\d{2})\s*[/.-]\s*(\d{4})")
 DATE_LIBELLE = re.compile(r"date\s*(?:de\s+facture|d'émission)?\s*[:.]?\s*" + DATE.pattern, re.I)
 SIRET = re.compile(r"siret\s*[:.]?\s*((?:\d[  ]?){13}\d)", re.I)
 QUATORZE = re.compile(r"(?<!\d)((?:\d[  ]?){13}\d)(?!\d)")
 TVA = re.compile(r"FR\s*([0-9A-Z]{2})\s*((?:\d\s?){8}\d)(?!\d)")
+# Confusions d'OCR courantes dans la clé, qui est numérique pour une entreprise française.
+CLE_TVA = str.maketrans("OoDQSIlZB", "000051128")
 LIBELLES_TOTAUX = {
     "total_ht": re.compile(r"total\s*h\.?\s*t\.?\b", re.I),
     "total_tva": re.compile(r"total\s*t\.?\s*v\.?\s*a\b|montant\s*tva", re.I),
@@ -137,7 +142,7 @@ def extraire(doc: DocumentOCR) -> Extraction:
         valides = [chiffres(c) for c in QUATORZE.findall(texte) if luhn_valide(chiffres(c))]
         ex.siret = valides[0] if valides else None
     if m := TVA.search(texte):
-        ex.tva_intra = f"FR{m.group(1)}{chiffres(m.group(2))}"
+        ex.tva_intra = f"FR{m.group(1).translate(CLE_TVA)}{chiffres(m.group(2))}"
 
     textes_lignes = [lg.texte for lg in lignes] or texte.splitlines()
     ex.fournisseur = extraire_fournisseur(textes_lignes)

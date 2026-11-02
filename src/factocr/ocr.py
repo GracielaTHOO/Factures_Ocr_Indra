@@ -118,10 +118,79 @@ class MoteurIndra:
         return DocumentOCR(chemin.name, f"{self.nom}-{self.mode}", pages)
 
 
-def moteur(nom: str, mode: str = "auto") -> MoteurIndra:
+class MoteurTesseract:
+    """Tesseract 5 (via pytesseract), la référence open source. Les PDF sont rendus en image."""
+
+    nom = "tesseract"
+
+    def __init__(self, langue: str = "fra", dpi: float = 200.0) -> None:
+        import pytesseract
+
+        self.pytesseract = pytesseract
+        self.langue = langue
+        self.dpi = dpi
+        self.mode = "ocr"
+
+    def images(self, chemin: Path) -> list[Any]:
+        from PIL import Image
+
+        if chemin.suffix.lower() != ".pdf":
+            return [Image.open(chemin).convert("L")]
+        import pypdfium2 as pdfium
+
+        doc = pdfium.PdfDocument(str(chemin))
+        try:
+            return [p.render(scale=self.dpi / 72).to_pil().convert("L") for p in doc]
+        finally:
+            doc.close()
+
+    def lire(self, chemin: Path) -> DocumentOCR:
+        pages = []
+        debut = time.perf_counter()
+        for i, image in enumerate(self.images(chemin)):
+            donnees = self.pytesseract.image_to_data(
+                image, lang=self.langue, output_type=self.pytesseract.Output.DICT
+            )
+            lignes = regrouper_mots(donnees)
+            fin = time.perf_counter()
+            pages.append(
+                PageOCR(
+                    page=i,
+                    source="ocr",
+                    texte="\n".join(lg.texte for lg in lignes),
+                    lignes=lignes,
+                    ms=round((fin - debut) * 1000, 1),
+                )
+            )
+            debut = fin
+        return DocumentOCR(chemin.name, self.nom, pages)
+
+
+def regrouper_mots(donnees: dict[str, list[Any]]) -> list[LigneOCR]:
+    """Les mots de `image_to_data` regroupés en lignes (bloc, paragraphe, ligne)."""
+    lignes: dict[tuple[int, int, int], list[int]] = {}
+    for i, mot in enumerate(donnees["text"]):
+        if str(mot).strip() and float(donnees["conf"][i]) >= 0:
+            cle = (donnees["block_num"][i], donnees["par_num"][i], donnees["line_num"][i])
+            lignes.setdefault(cle, []).append(i)
+    resultat = []
+    for indices in lignes.values():
+        x0 = min(donnees["left"][i] for i in indices)
+        y0 = min(donnees["top"][i] for i in indices)
+        x1 = max(donnees["left"][i] + donnees["width"][i] for i in indices)
+        y1 = max(donnees["top"][i] + donnees["height"][i] for i in indices)
+        confiance = sum(float(donnees["conf"][i]) for i in indices) / len(indices) / 100
+        texte = " ".join(str(donnees["text"][i]) for i in indices)
+        resultat.append(LigneOCR([x0, y0, x1, y1], texte, round(confiance, 4)))
+    return resultat
+
+
+def moteur(nom: str, mode: str = "auto") -> MoteurIndra | MoteurTesseract:
     if nom == "indra":
         return MoteurIndra(mode=mode)
-    raise ValueError(f"moteur inconnu : {nom} (disponible : indra)")
+    if nom == "tesseract":
+        return MoteurTesseract()
+    raise ValueError(f"moteur inconnu : {nom} (disponibles : indra, tesseract)")
 
 
 def fichiers(dossier: Path) -> list[Path]:
@@ -129,7 +198,10 @@ def fichiers(dossier: Path) -> list[Path]:
 
 
 def ocr_dossier(
-    lecteur: MoteurIndra, entree: Path, sortie: Path, chemins: Iterable[Path] | None = None
+    lecteur: MoteurIndra | MoteurTesseract,
+    entree: Path,
+    sortie: Path,
+    chemins: Iterable[Path] | None = None,
 ) -> list[DocumentOCR]:
     """Lit chaque fichier de `entree` et écrit `sortie/<chemin relatif>.json`."""
     documents = []

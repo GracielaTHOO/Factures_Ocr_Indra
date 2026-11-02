@@ -270,28 +270,59 @@ def dessiner_pdf(f: Facture, chemin: Path) -> None:
     c.save()
 
 
-def simuler_scan(pdf: Path, png: Path, rng: random.Random, dpi: int = 150) -> None:
+# Niveaux de dégradation : rotation max (°), flou (rayon min, max), bruit (écart type),
+# résolution (dpi), qualité JPEG (None = PNG sans perte), contraste minimal.
+NIVEAUX = {
+    "leger": (1.5, (0.3, 0.8), 8, 150, None, 0.92),
+    "moyen": (3.0, (0.8, 1.2), 18, 120, 45, 0.80),
+    "fort": (5.0, (0.9, 1.2), 25, 110, 30, 0.65),
+}
+
+
+def simuler_scan(
+    pdf: Path, png: Path, rng: random.Random, dpi: int = 150, niveau: str = "leger"
+) -> None:
     """Rend la page en image puis la dégrade comme une numérisation de bureau."""
+    import io
+
     import numpy as np
     import pypdfium2 as pdfium
 
+    rotation, (flou_min, flou_max), ecart, dpi_niveau, jpeg, contraste = NIVEAUX[niveau]
+    dpi = dpi if niveau == "leger" else dpi_niveau
     doc = pdfium.PdfDocument(str(pdf))
     try:
         img = doc[0].render(scale=dpi / 72).to_pil().convert("L")
     finally:
         doc.close()
-    img = img.rotate(rng.uniform(-1.5, 1.5), resample=Image.BICUBIC, expand=True, fillcolor=255)
-    img = img.filter(ImageFilter.GaussianBlur(rng.uniform(0.3, 0.8)))
+    img = img.rotate(
+        rng.uniform(-rotation, rotation), resample=Image.BICUBIC, expand=True, fillcolor=255
+    )
+    img = img.filter(ImageFilter.GaussianBlur(rng.uniform(flou_min, flou_max)))
     tableau = np.asarray(img, dtype=np.float32)
-    bruit = np.random.default_rng(rng.randint(0, 2**32 - 1)).normal(0, 8, tableau.shape)
-    tableau = np.clip(tableau * rng.uniform(0.92, 1.0) + bruit, 0, 255).astype(np.uint8)
-    Image.fromarray(tableau).save(png)
+    bruit = np.random.default_rng(rng.randint(0, 2**32 - 1)).normal(0, ecart, tableau.shape)
+    facteur = rng.uniform(contraste, 1.0)
+    # Contraste réduit autour du blanc : le texte pâlit comme sur une photocopie fatiguée.
+    tableau = np.clip(255 - (255 - tableau) * facteur + bruit, 0, 255).astype(np.uint8)
+    img = Image.fromarray(tableau)
+    if jpeg:
+        tampon = io.BytesIO()
+        img.save(tampon, format="JPEG", quality=jpeg)
+        img = Image.open(io.BytesIO(tampon.getvalue()))
+    img.save(png)
 
 
-def generer(dossier: Path, nombre: int = 20, graine: int = 42) -> list[Facture]:
-    """Écrit `nombre` factures dans `dossier` : PDF, PNG scanné et JSON de vérité terrain."""
+def generer(
+    dossier: Path, nombre: int = 20, graine: int = 42, niveaux: tuple[str, ...] = ()
+) -> list[Facture]:
+    """Écrit `nombre` factures dans `dossier` : PDF, PNG scanné et JSON de vérité terrain.
+
+    Le scan léger va toujours dans `scan/`. Chaque niveau de `niveaux` (moyen, fort) ajoute
+    `scan_<niveau>/`, avec son propre tirage aléatoire : à graine égale, les factures et le
+    scan léger restent les mêmes, qu'on demande des niveaux en plus ou non.
+    """
     rng = random.Random(graine)
-    for sous in ("numerique", "scan", "verite"):
+    for sous in ["numerique", "scan", "verite", *(f"scan_{n}" for n in niveaux)]:
         (dossier / sous).mkdir(parents=True, exist_ok=True)
     factures = []
     for i in range(1, nombre + 1):
@@ -299,6 +330,9 @@ def generer(dossier: Path, nombre: int = 20, graine: int = 42) -> list[Facture]:
         pdf = dossier / "numerique" / f"{f.id}.pdf"
         dessiner_pdf(f, pdf)
         simuler_scan(pdf, dossier / "scan" / f"{f.id}.png", rng)
+        for n in niveaux:
+            rng_n = random.Random(f"{graine}-{n}-{i}")
+            simuler_scan(pdf, dossier / f"scan_{n}" / f"{f.id}.png", rng_n, niveau=n)
         (dossier / "verite" / f"{f.id}.json").write_text(f.vers_json(), encoding="utf-8")
         factures.append(f)
     return factures
