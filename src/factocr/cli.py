@@ -117,7 +117,7 @@ def extraire(
         )
         tableau = tableau_markdown(rapport)
         (sortie / f"{nom}-evaluation.md").write_text(tableau + "\n", encoding="utf-8")
-        console.print(tableau)
+        console.print(tableau, soft_wrap=True)
         console.print(f"Origine des résultats : {rapport['methodes']}")
 
 
@@ -142,4 +142,4 @@ def bench(
     )
     texte = tableau(resultats)
     (sortie / "bench.md").write_text(texte + "\n", encoding="utf-8")
-    console.print(texte)
+    console.print(texte, soft_wrap=True)

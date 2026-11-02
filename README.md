@@ -19,6 +19,35 @@ numéro, date, fournisseur, SIRET, TVA intracommunautaire, lignes et totaux.
 
 Le plan jour par jour est dans [docs/PLAN.md](docs/PLAN.md).
 
+## Premiers résultats (2 novembre 2026)
+
+20 factures synthétiques, OCR forcé partout (la couche texte des PDF n'est pas lue), extraction
+des 8 champs d'en-tête par règles, sur un runner GitHub Actions standard (4 cœurs, sans GPU).
+Le [workflow du banc](.github/workflows/bench.yml) refait ce tableau à chaque modification.
+
+| Moteur | Documents | Mots retrouvés (F1) | Champs justes | Factures parfaites | Temps médian / page |
+|---|---|---:|---:|---:|---:|
+| Indra | PDF numérique | 99,8 % | 100 % | 20/20 | 314 ms |
+| Indra | scan léger | 99,5 % | 100 % | 20/20 | 326 ms |
+| Indra | scan moyen | 93,3 % | 95,6 % | 14/20 | 330 ms |
+| Indra | scan fort | 66,3 % | 66,2 % | 0/20 | 438 ms |
+| Tesseract 5 | PDF numérique | 95,9 % | 98,8 % | 18/20 | 512 ms |
+| Tesseract 5 | scan léger | 95,2 % | 97,5 % | 16/20 | 716 ms |
+| Tesseract 5 | scan moyen | 79,8 % | 79,4 % | 4/20 | 537 ms |
+| Tesseract 5 | scan fort | 36,4 % | 11,9 % | 0/20 | 561 ms |
+
+- Sur un document propre, Indra est parfait et 1,6 à 2 fois plus rapide que Tesseract.
+- Plus le scan se dégrade, plus l'écart se creuse : sur un scan moyen, 14 factures entièrement
+  justes contre 4. Le point faible d'Indra à ce niveau est le petit numéro de facture en haut à
+  droite (6 ratés sur 20).
+- Sur un scan très abîmé (100 dpi, flou, JPEG fort), aucun moteur ne suffit.
+- Extraction par LLM (Qwen2.5 3B, local) : en-tête aussi bon que les règles mais 40 s par
+  facture ; lignes du tableau justes sur 8 factures sur 20, car Indra rend les cellules dans le
+  désordre.
+
+Limite : ce sont des factures générées, avec deux gabarits ; de vraies factures seront plus
+variées.
+
 ## Démarrage
 
 ```bash

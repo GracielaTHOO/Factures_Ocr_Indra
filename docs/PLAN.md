@@ -33,6 +33,13 @@ Un commit par jour au minimum, sur `main`, avec une CI verte.
   les règles suffisent pour l'en-tête ; pour les lignes, il faudra reconstruire le tableau à
   partir des boîtes d'Indra (même hauteur = même ligne) avant de le donner au LLM.
 
+- **J5 (02/11)** : banc Indra contre Tesseract 5 sur 20 factures et trois niveaux de scan
+  (voir le tableau du README). Indra gagne partout : 100 % des champs sur PDF et scan léger
+  (Tesseract 98,8 % et 97,5 %), 95,6 % contre 79,4 % sur scan moyen, et 1,6 à 2 fois plus
+  rapide. Sur scan fort, les deux décrochent (66 % contre 12 %). Le banc a aussi corrigé deux
+  faiblesses des règles vues avec Tesseract (clé de TVA « O0 », « FACTURE N° TVA » sur une
+  ligne).
+
 ## Ce qui peut glisser
 
 - Si le LLM en CI est trop lent, J4 se limite aux règles et le LLM passe après mardi.
