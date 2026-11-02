@@ -40,7 +40,7 @@ Le [workflow du banc](.github/workflows/bench.yml) refait ce tableau à chaque m
 - Plus le scan se dégrade, plus l'écart se creuse : sur un scan moyen, 14 factures entièrement
   justes contre 4. Le point faible d'Indra à ce niveau est le petit numéro de facture en haut à
   droite (6 ratés sur 20).
-- Sur un scan très abîmé (100 dpi, flou, JPEG fort), aucun moteur ne suffit.
+- Sur un scan très abîmé (110 dpi, flou, JPEG fort), aucun moteur ne suffit.
 - Extraction par LLM (Qwen2.5 3B, local) : en-tête aussi bon que les règles mais 40 s par
   facture ; lignes du tableau justes sur 8 factures sur 20, car Indra rend les cellules dans le
   désordre.
