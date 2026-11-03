@@ -39,6 +39,11 @@ Un commit par jour au minimum, sur `main`, avec une CI verte.
   rapide. Sur scan fort, les deux décrochent (66 % contre 12 %). Le banc a aussi corrigé deux
   faiblesses des règles vues avec Tesseract (clé de TVA « O0 », « FACTURE N° TVA » sur une
   ligne).
+- **J6 (03/11)** : `factocr demo`, une interface Gradio qui montre les champs, les contrôles et
+  la ligne source de chaque champ sur l'image ; capture dans le README à partir de la vraie
+  sortie d'Indra. Version 0.1.0. Le test simple est fini : CSV des champs, banc Indra contre
+  Tesseract et démo. Pistes : reconstruire le tableau des lignes à partir des boîtes, essayer de
+  vraies factures.
 
 ## Ce qui peut glisser
 

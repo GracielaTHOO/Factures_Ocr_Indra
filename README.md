@@ -48,6 +48,20 @@ Le [workflow du banc](.github/workflows/bench.yml) refait ce tableau à chaque m
 Limite : ce sont des factures générées, avec deux gabarits ; de vraies factures seront plus
 variées.
 
+## Démo
+
+![La démo sur un scan : champs extraits, contrôles, et ligne source de chaque champ](docs/apercu-demo.png)
+
+Une mini-interface Gradio : on dépose une facture (PDF ou image), on choisit le moteur, et on voit
+les champs extraits, les trois contrôles et, sur l'image, la ligne d'où vient chaque champ.
+La capture montre la vraie sortie d'Indra sur un scan simulé (`facture_002`), lue dans GitHub
+Actions en 0,46 s.
+
+```bash
+pip install -e ".[demo,ocr]"
+factocr demo                          # http://127.0.0.1:7860, exemples tirés de data/
+```
+
 ## Démarrage
 
 ```bash
