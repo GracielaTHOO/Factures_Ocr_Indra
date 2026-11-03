@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "factocr"
-version = "0.0.1"
+version = "0.1.0"
 description = "Extraction de factures françaises avec Indra OCR (Datalab) : OCR sur CPU, champs structurés, export CSV et comparaison avec Tesseract."
 readme = "README.md"
 license = { text = "MIT" }
@@ -23,6 +23,7 @@ dependencies = [
 [project.optional-dependencies]
 ocr = ["indra-ocr>=1.1"]
 tesseract = ["pytesseract>=0.3.10"]
+demo = ["gradio>=4.40"]
 dev = ["pytest>=8.0", "ruff>=0.6"]
 
 [project.scripts]

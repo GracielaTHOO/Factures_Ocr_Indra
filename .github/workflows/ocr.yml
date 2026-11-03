@@ -50,6 +50,9 @@ jobs:
         run: |
           factocr extraire sorties/ocr/indra-auto
           factocr extraire sorties/ocr/indra-ocr
+      - name: Lignes lues par Indra sur un scan (pour la capture du README)
+        run: |
+          python -c "import json; d=json.load(open('sorties/ocr/indra-ocr/scan/facture_002.json')); print('INDRA_JSON', json.dumps(d, ensure_ascii=False, separators=(',', ':')))"
       - name: Installation d'Ollama
         if: github.event_name == 'workflow_dispatch'
         run: |

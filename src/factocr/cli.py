@@ -143,3 +143,19 @@ def bench(
     texte = tableau(resultats)
     (sortie / "bench.md").write_text(texte + "\n", encoding="utf-8")
     console.print(texte, soft_wrap=True)
+
+
+@app.command()
+def demo(
+    donnees: Path = typer.Option(Path("data"), help="Factures proposées en exemple."),
+    port: int = typer.Option(7860, help="Port local."),
+) -> None:
+    """Lance la mini-démo Gradio (pip install -e ".[demo,ocr]")."""
+    from factocr.demo import construire
+
+    exemples = [
+        str(p)
+        for sous in ("numerique", "scan", "scan_moyen")
+        for p in sorted((donnees / sous).glob("facture_00[12].*"))
+    ]
+    construire(exemples).launch(server_port=port)
